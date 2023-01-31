@@ -13,7 +13,7 @@ import jp.nyatla.kokolink.utils.recoverable.RecoverableStopIteration;
 
 public class MinimAudioInputIterator implements IAudioInputIterator
 {
-	class Listener extends ArrayBlockingQueue<Float> implements AudioListener 
+	class Listener extends ArrayBlockingQueue<Double> implements AudioListener 
 	{
 		/**
 		 * 
@@ -30,9 +30,11 @@ public class MinimAudioInputIterator implements IAudioInputIterator
 			if(!this._enable) {
 				return;
 			}
-			for(float i : arg0) {
+			//キューがいっぱいの場合は先頭を削除しながら押し込む。
+			for(double i : arg0) {
 				if(!this.offer(i)) {
 					this.remove();
+					this.add(i);
 				};
 			}
 		}
@@ -44,13 +46,19 @@ public class MinimAudioInputIterator implements IAudioInputIterator
 			}
 			int l=Math.min(arg0.length,arg0.length);
 			for(int i=0;i<l;i++) {
-				if(!this.offer((arg0[i]+arg1[1])*0.5f)) {
+				double d=(arg0[i]+arg1[1])*0.5;
+				if(!this.offer(d)) {
 					this.remove();
+					this.add(d);
 				}
 			}
 		}
-		public void setEnable(boolean b) {
-			this._enable=b;
+		synchronized public void kill() {
+			if(!this.offer(null)) {
+				this.remove();
+				this.add(null);
+			}
+			this._enable=false;
 		}
 	}
 
@@ -65,41 +73,26 @@ public class MinimAudioInputIterator implements IAudioInputIterator
 		this._listener=listener;
 
 	}
-
-
-
+	/**
+	 * ブロック中にstopすると
+	 */
 	@Override
-	public Float next() throws PyStopIteration {
+	public Double next() throws PyStopIteration {
 		try {
 			synchronized(this._listener) {
-				Float r=this._listener.poll(0, TimeUnit.MILLISECONDS);
-				if(r==null) {
-					throw new RecoverableStopIteration();
+				Double d=this._listener.take();//簡単にしたいのでブロックする。
+				if(d==null) {//ターミネイトマーカー
+					throw new PyStopIteration();
 				}
-				return r;					
+				return d;
 			}
 		} catch (InterruptedException e) {
 			throw new PyStopIteration(e);
 		}
 	}
-
 	@Override
 	public void close() throws IOException {
-		this.stop();
-		this._in.removeListener(null);
-	}
-
-	@Override
-	public void start() {
-		this._listener.clear();
-		this._listener.setEnable(true);
-	}
-
-	@Override
-	public void stop() {
-		synchronized(this._listener) {
-			this._listener.setEnable(false);
-		}
-	}
-	
+		this._listener.kill();
+		this._in.removeListener(this._listener);
+	}	
 }

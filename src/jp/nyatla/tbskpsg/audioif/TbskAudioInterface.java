@@ -1,11 +1,6 @@
-package jp.nyatla.tbskpsg;
+package jp.nyatla.tbskpsg.audioif;
 
 import ddf.minim.Minim;
-import jp.nyatla.tbskpsg.audioif.IAudioInputIterator;
-import jp.nyatla.tbskpsg.audioif.IAudioInterface;
-import jp.nyatla.tbskpsg.audioif.IAudioPlayer;
-import jp.nyatla.tbskpsg.audioif.MinimAudioInputIterator;
-import jp.nyatla.tbskpsg.audioif.MinimAudioPlayer;
 import jp.nyatla.tbskpsg.result.ModulateIterable;
 
 public class TbskAudioInterface {

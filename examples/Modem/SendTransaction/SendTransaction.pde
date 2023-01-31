@@ -1,8 +1,9 @@
+/**
+ * Send transaction to audio device.
+ */
+
 import ddf.minim.*;
 
-/**
- * Modulated wave file.
- */
 import jp.nyatla.tbskpsg.*;
 import jp.nyatla.tbskpsg.audioif.*;
 import jp.nyatla.tbskpsg.result.*;

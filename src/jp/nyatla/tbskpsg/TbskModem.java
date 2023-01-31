@@ -6,17 +6,21 @@ package jp.nyatla.tbskpsg;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 
+import java.util.ArrayDeque;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+
+import jp.nyatla.tbskpsg.audioif.IAudioInputIterator;
 import jp.nyatla.tbskpsg.audioif.IAudioInterface;
 import jp.nyatla.tbskpsg.audioif.IAudioPlayer;
 
 import jp.nyatla.kokolink.compatibility;
+import jp.nyatla.kokolink.utils.BrokenTextStreamDecoder;
 import jp.nyatla.kokolink.utils.recoverable.RecoverableException;
 import jp.nyatla.tbskmodem.TbskDemodulator;
+import jp.nyatla.tbskmodem.TbskDemodulator.DemodulateAsIntAS;
 import jp.nyatla.tbskmodem.TbskModulator;
 import jp.nyatla.tbskpsg.result.ModulateIterable;
-import jp.nyatla.tbskpsg.utils.WaveFile;
-import jp.nyatla.tbskpsg.result.DemodulateAsStrIterable;
-import jp.nyatla.tbskpsg.result.DemodulateIterable;
 import processing.core.*;
 
 /**
@@ -36,6 +40,8 @@ public class TbskModem
 
 	int myVariable = 0;
 	private IAudioInterface _aif;
+	private IAudioInputIterator _inputiter;
+	private RxTask _rxtask;
 	
 	
 	public final static TbskTone DEFAULT_TONE=TbskTone.xpskSin();
@@ -69,117 +75,218 @@ public class TbskModem
 	
 
 	
-	/**
-	 * Modulate the sequence with TBSK.
-	 * @param s
-	 * 
-	 * @return
-	 */
-	public ModulateIterable modulate(Iterable<Integer> s){
-		return new ModulateIterable(this._parent,this._mod.modulate(s,8));
-	}
-	public ModulateIterable modulate(Integer[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8));
-	}
-	public ModulateIterable modulate(Short[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8));
-	}
-	public ModulateIterable modulate(Byte[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8));
-	}
-	public ModulateIterable modulate(int[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8));
-	}
-	public ModulateIterable modulate(short[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8));
-	}
-	public ModulateIterable modulate(byte[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8));
-	}
-	public ModulateIterable modulate(String s){
-		try {
-			return new ModulateIterable(this._parent,this._mod.modulate(s));
-		} catch (UnsupportedEncodingException e) {
-			throw new RuntimeException(e);
+
+
+	class RxData{
+		private ArrayDeque<Integer> _q=new ArrayDeque<Integer>();
+		private BrokenTextStreamDecoder _decoder;
+		private boolean _is_stop;
+		public RxData()
+		{
+			this._is_stop=false;
 		}
+		synchronized void push_bits(int v) {
+			this._q.add(v);
+		}
+		synchronized void stop() {
+			this._is_stop=true;
+		}
+		/**
+		 * このインスタンスで受信できる可能性があるときはtrue
+		 * @return
+		 */
+		synchronized public boolean active() {
+			return this._decoder.holdLen()>0 ||this._q.size()>0 || this._is_stop==false;
+		}		
+		/**
+		 * 1バイトのデータを得る。readyAsIntがtrueである必要がある。
+		 * @return
+		 */
+		synchronized public int asInt()
+		{
+			//文字解析キューに入っているものを先に消費
+			Byte s=this._decoder.peekFront();
+			if(s!=null) {
+				return Byte.toUnsignedInt(s);
+			}			
+			assert(this._q.size()>0);
+			return this._q.poll();
+		}
+
+		/**
+		 * 読み出し可能状態にあるか返す。
+		 * @return
+		 * trueの場合、asIntが利用できます。
+		 */
+		synchronized public boolean readyAsInt() {
+			return this._q.size()>0 || this._decoder.holdLen()>0;
+		}/*
+		
+		synchronized public Character asChar()
+		{
+			//キューにbyteがある間頑張る
+			while(this._q.size()>0){
+				Character c=this._decoder.update(this._q.poll().byteValue());
+				if(c!=null) {
+					return c;
+				}
+			}
+			//キューにbyteがない
+			if(this._is_stop) {
+				//入力見込みがない
+				return this._decoder.update();
+			}
+			//入力見込みがある
+			return null;
+		}		
+		
+		
+		synchronized public boolean readyAsChar()
+		{
+			while(!this._decoder.isBufferFull()) {
+				if(this._q.size()>0){
+					Character c=this._decoder.test(this._q.poll().byteValue());
+					if(c!=null) {
+						return c;
+					}
+				}
+				
+			}
+
+			if(this._decoder.isBufferFull()) {
+				int l=this._decoder.test();
+				if(l==-1) {
+					return true;//"?"が返ってくる。
+				}else if(l==0) {
+				}
+			}
+			int ql=this._decoder.holdLen();
+			
+			while(this._q.size()>0){
+				Character c=this._decoder.test(this._q.poll().byteValue());
+				if(c!=null) {
+					return c;
+				}
+			}
+			
+			return this._decoder.test();
+			return this._q.size()>0 || this._decoder.holdLen()>0;
+		}	*/	
+
 	}
+
+
+
 	
-	
-	public DemodulateIterable demodulate(Iterable<Double> s)
-	{		
-		try {
-			return new DemodulateIterable(this._parent,this._demod.demodulateAsInt(s));
-		} catch (RecoverableException e) {
-			return null;
+	class RxTask extends Thread{
+		private TbskDemodulator _demod;
+		private BlockingQueue<RxData> _rxq;
+		private IAudioInputIterator _input;
+		public RxTask(TbskDemodulator demod,IAudioInputIterator input) {
+			this._demod=demod;
+			this._input=input;
+			this._rxq=new ArrayBlockingQueue<RxData>(1);
 		}
-	}
-	public DemodulateIterable demodulate(Double[] s)
-	{
-		try {
-			return new DemodulateIterable(this._parent,this._demod.demodulateAsInt(compatibility.toDoublePyIterator(s)));
-		} catch (RecoverableException e) {
-			return null;
+		public void run()
+		{
+			for(;;) {
+				//bit iterableを起動	
+				Iterable<Integer> iter;
+				try {
+					iter = this._demod.demodulateAsInt(this._input);
+				} catch (RecoverableException e1) {
+					DemodulateAsIntAS recover=e1.detach();
+					for(;;) {
+						if(!recover.run()) {
+							continue;
+						}
+						iter=recover.getResult();
+						break;
+					}
+				}
+				if(iter==null) {
+					//終端まで信号が発見できなかった。マジか。（まじか）
+					PApplet.debug("RXTask closing.");
+					return;
+				}
+				RxData last=new RxData();
+				synchronized(this) {
+					this._rxq.add(last);					
+				}
+				for(Integer i:iter) {	//このイテレータはInterruptでstopiterationを出す。
+					last.push_bits(i);//データ追記
+				}
+				last.stop();//停止
+			}
 		}
-	}
-	public DemodulateIterable demodulate(double[] s)
-	{
-		try {
-			return new DemodulateIterable(this._parent,this._demod.demodulateAsInt(compatibility.toDoublePyIterator(s)));
-		} catch (RecoverableException e) {
-			return null;
+		synchronized public boolean ready() {
+			//先頭から無効なRxDataを削除
+			while(this._rxq.size()>0) {
+				var d=this._rxq.peek();
+				if(d.active()) {
+					break;
+				}
+				this._rxq.remove();
+			}				
+			if(this._rxq.size()==0) {
+				return false;
+			}
+			if(this._rxq.size()>0) {
+				RxData d=this._rxq.peek();
+				return d.readyAsInt();
+			}
+			return false;
 		}
-	}
-	public DemodulateIterable demodulate(float[] s)
-	{
-		try {
-			return new DemodulateIterable(this._parent,this._demod.demodulateAsInt(compatibility.toDoublePyIterator(s)));
-		} catch (RecoverableException e) {
-			return null;
+		synchronized public int read() {
+			if(!this.ready()) {
+				throw new RuntimeException("Not ready(Q).");
+			}
+			RxData d=this._rxq.peek();
+			return d.asInt();
 		}
 	}	
-	public DemodulateIterable demodulate(WaveFile s)
+
+	public void startRx()
 	{
-		return this.demodulate(s.getFrame());
+		if(this._rxtask!=null) {
+			throw new RuntimeException("RxTask is already Running.");
+		}
+		if(this._aif==null) {
+			throw new RuntimeException("This instance has not Audio interface");
+		}
+		IAudioInputIterator input=this._aif.createInputIterator();
+		if(input==null) {
+			throw new RuntimeException("This instance has not Audio input iterator.");
+		}
+		RxTask task=new RxTask(this._demod,input);
+		this._rxtask=task;
 	}
-	
-
-
-	
-	public DemodulateAsStrIterable demodulateAsStr(Iterable<Double> s){
+	public void stopRx()
+	{
+		if(this._aif==null) {
+			throw new RuntimeException("This instance has not Audio interface");
+		}
+		if(this._inputiter==null) {
+			assert(this._rxtask==null);
+			throw new RuntimeException("This instance has not Audio input iterator.");
+		}
 		try {
-			return new DemodulateAsStrIterable(this._parent,this._demod.demodulateAsStr(s));
-		} catch (RecoverableException e) {
-			return null;
+			//
+			this._inputiter.close();//ここでStopIterationが発生して、waitForSignalが停止するはず。
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}finally {
+			this._inputiter=null;
+			this._rxtask.interrupt();
+			try {
+				this._rxtask.join();
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}finally {
+				this._rxtask=null;
+			}
 		}
 	}
-	public DemodulateAsStrIterable demodulateAsStr(Double[] s) {
-		try {
-			return new DemodulateAsStrIterable(this._parent,this._demod.demodulateAsStr(compatibility.toDoublePyIterator(s),"utf-8"));
-		} catch (RecoverableException e) {
-			return null;
-		}
-	}
-	public DemodulateAsStrIterable demodulateAsStr(double[] s) {
-		try {
-			return new DemodulateAsStrIterable(this._parent,this._demod.demodulateAsStr(compatibility.toDoublePyIterator(s),"utf-8"));
-		} catch (RecoverableException e) {
-			return null;
-		}		
-	}
-	public DemodulateAsStrIterable demodulateAsStr(float[] s) {
-		try {
-			return new DemodulateAsStrIterable(this._parent,this._demod.demodulateAsStr(compatibility.toDoublePyIterator(s),"utf-8"));
-		} catch (RecoverableException e) {
-			return null;
-		}		
-	}
-
-	public DemodulateAsStrIterable demodulateAsStr(WaveFile s)
-	{
-		return this.demodulateAsStr(s.getFrame());
-	}
-	
-	
 
 
 	
@@ -216,7 +323,7 @@ public class TbskModem
 	 * @param s
 	 * @param async
 	 */
-	public void tx(ModulateIterable s,boolean async)
+	synchronized public void tx(ModulateIterable s,boolean async)
 	{
 		if(this._aif==null) {
 			throw new RuntimeException("This instance has not Audio interface");
@@ -267,29 +374,41 @@ public class TbskModem
 			this._async_player=player;			
 		}
 	}
+	
+	/**
+	 * Modulate the sequence with TBSK.
+	 * @param s
+	 * 
+	 * @return
+	 */
+
 	public void tx(Iterable<Integer> s,boolean async) {
-		this.tx(this.modulate(s), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(s,8)), async);
 	}
 	public void tx(Integer[] s,boolean async) {
-		this.tx(this.modulate(s), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8)), async);
 	}
 	public void tx(Short[] s,boolean async) {
-		this.tx(this.modulate(s), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8)), async);
 	}
 	public void tx(Byte[] s,boolean async) {
-		this.tx(this.modulate(s), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8)), async);
 	}
 	public void tx(int[] s,boolean async) {
-		this.tx(this.modulate(s), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8)), async);
 	}
 	public void tx(short[] s,boolean async) {
-		this.tx(this.modulate(s), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8)), async);
 	}
 	public void tx(byte[] s,boolean async) {
-		this.tx(this.modulate(s), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8)), async);
 	}
 	public void tx(String s,boolean async) {
-		this.tx(this.modulate(s), async);
+		try {
+			this.tx(new ModulateIterable(this._parent,this._mod.modulate(s)),async);
+		} catch (UnsupportedEncodingException e) {
+			throw new RuntimeException(e);
+		}		
 	}
 
 	
@@ -320,6 +439,7 @@ public class TbskModem
 
 
 
+
 	/**
 	 * return the version of the Library.
 	 * 
@@ -329,7 +449,7 @@ public class TbskModem
 		return Version.STRING;
 	}
 
-
+	
 
 }
 
