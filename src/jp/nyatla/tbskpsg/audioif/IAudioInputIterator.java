@@ -10,4 +10,14 @@ import jp.nyatla.kokolink.types.Py_interface__.IPyIterator;
  */
 public interface IAudioInputIterator extends IPyIterator<Double>,Closeable
 {
+	/**
+	 * 受信したフレーム数を返します。
+	 * @return
+	 */
+	public long acceptedSamples();
+	/**
+	 * Σsqrt(sample[n]^2)/nを返します。
+	 * @return
+	 */
+	public double getRMS();
 }
