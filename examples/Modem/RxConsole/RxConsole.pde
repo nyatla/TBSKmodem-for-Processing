@@ -7,11 +7,9 @@ import jp.nyatla.tbskpsg.*;
 import jp.nyatla.tbskpsg.audioif.*;
 import jp.nyatla.tbskpsg.result.*;
 import jp.nyatla.tbskpsg.utils.*;
-float[] wave;
-String str;
+
 TbskTone tone=TbskTone.xpskSin();
 TbskPreamble preamble=TbskPreamble.coff(tone);
-
 TbskModem modem;
 
 

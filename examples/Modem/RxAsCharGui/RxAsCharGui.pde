@@ -7,11 +7,7 @@ import jp.nyatla.tbskpsg.audioif.*;
 import jp.nyatla.tbskpsg.result.*;
 import jp.nyatla.tbskpsg.utils.*;
 
-TbskTone tone=TbskTone.xpskSin();
-TbskPreamble preamble=TbskPreamble.coff(tone);
-
 TbskModem modem;
-
 
 void setup() {
   size(320, 200);
@@ -23,6 +19,9 @@ void setup() {
 
   //Initialize modem instance with Audio interface
   Minim minim=new Minim(this);
+  TbskTone tone=TbskTone.xpskSin();
+  TbskPreamble preamble=TbskPreamble.coff(tone);
+  
   modem=new TbskModem(this,tone,preamble,new MinimAudioInterface(minim,16000));
   //TbskModem._DEBUG=true;
 
