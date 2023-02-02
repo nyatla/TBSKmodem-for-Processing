@@ -44,7 +44,7 @@ public class MinimAudioInputIterator implements IAudioInputIterator
 						this._bq.remove();
 						this._bq.add(0.);
 					}
-					this._rms.update(i);					
+					this._rms.update(0);					
 				}
 			}else {
 				//キューがいっぱいの場合は先頭を削除しながら押し込む。
@@ -69,7 +69,7 @@ public class MinimAudioInputIterator implements IAudioInputIterator
 						this._bq.remove();
 						this._bq.add(0.);
 					}
-					this._rms.update(i);					
+					this._rms.update(0);					
 				}
 			}else {
 				for(int i=0;i<l;i++) {
@@ -78,7 +78,7 @@ public class MinimAudioInputIterator implements IAudioInputIterator
 						this._bq.remove();
 						this._bq.add(d);
 					}
-					this._rms.update(i);
+					this._rms.update(d);
 				}				
 			}
 		}

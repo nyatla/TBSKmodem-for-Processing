@@ -613,7 +613,7 @@ public class TbskModem
 			}
 			this._se.acquire();
 			Th th=new Th();
-			th.run();
+			th.start();
 			this._th=th;
 		}
 		public boolean getFinished() {
@@ -698,6 +698,7 @@ public class TbskModem
 				try {
 					this._rxtask.mute();
 					pobs.play();
+					
 				} catch (InterruptedException e) {
 					throw new RuntimeException(e);//起こらないはずなのだが。
 				}
