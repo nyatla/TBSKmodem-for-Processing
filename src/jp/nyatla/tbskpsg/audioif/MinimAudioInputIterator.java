@@ -38,15 +38,23 @@ public class MinimAudioInputIterator implements IAudioInputIterator
 			//TbskModem.debug(String.format("IN1:%d",arg0.length));			
 			this._sample_counter=this._sample_counter+arg0.length;
 			if(!this._enable) {
-				return;
-			}
-			//キューがいっぱいの場合は先頭を削除しながら押し込む。
-			for(double i : arg0) {
-				if(!this._bq.offer(i)) {
-					this._bq.remove();
-					this._bq.add(i);
-				};
-				this._rms.update(i);
+				int l=arg0.length;
+				for(int i=0;i<l;i++) {
+					if(!this._bq.offer(0.)) {
+						this._bq.remove();
+						this._bq.add(0.);
+					}
+					this._rms.update(i);					
+				}
+			}else {
+				//キューがいっぱいの場合は先頭を削除しながら押し込む。
+				for(double i : arg0) {
+					if(!this._bq.offer(i)) {
+						this._bq.remove();
+						this._bq.add(i);
+					};
+					this._rms.update(i);
+				}
 			}
 		}
 
@@ -54,25 +62,33 @@ public class MinimAudioInputIterator implements IAudioInputIterator
 		synchronized public void samples(float[] arg0, float[] arg1) {
 			//TbskModem.debug(String.format("IN2:%d,%d",arg0.length,arg1.length));
 			this._sample_counter=this._sample_counter+arg0.length;
-			if(!this._enable) {
-				return;
-			}
 			int l=Math.min(arg0.length,arg1.length);
-			for(int i=0;i<l;i++) {
-				double d=(arg0[i]+arg1[1])*0.5;
-				if(!this._bq.offer(d)) {
-					this._bq.remove();
-					this._bq.add(d);
+			if(!this._enable) {
+				for(int i=0;i<l;i++) {
+					if(!this._bq.offer(0.)) {
+						this._bq.remove();
+						this._bq.add(0.);
+					}
+					this._rms.update(i);					
 				}
-				this._rms.update(i);
+			}else {
+				for(int i=0;i<l;i++) {
+					double d=(arg0[i]+arg1[1])*0.5;
+					if(!this._bq.offer(d)) {
+						this._bq.remove();
+						this._bq.add(d);
+					}
+					this._rms.update(i);
+				}				
 			}
 		}
 		public double take() throws InterruptedException {
 			return this._bq.take();
 		}
-		synchronized public void kill() {
-			this._enable=false;
+		synchronized public void mute(boolean v) {
+			this._enable=!v;
 		}
+
 		/**
 		 * 平均RMS値
 		 * @return
@@ -115,6 +131,10 @@ public class MinimAudioInputIterator implements IAudioInputIterator
 		TbskModem.debug("MinimAudioInputIterator/");
 
 	}
+	@Override
+	public void mute(boolean v) {
+		this._listener.mute(v);
+	}
 	/**
 	 * ブロック中にstopすると
 	 */
@@ -132,7 +152,7 @@ public class MinimAudioInputIterator implements IAudioInputIterator
 	 */
 	@Override
 	public void close() throws IOException {
-		this._listener.kill();
+		this._listener.mute(true);
 		this._in.removeListener(this._listener);
 		this._in.close();
 	}

@@ -8,21 +8,15 @@ import java.io.Closeable;
  */
 public interface IAudioPlayer extends Closeable{
 	/**
-	 * 先頭から再生します。再生中の場合は失敗します。
-	 * @param async
-	 * メディア再生を非同期に実行する場合はtrueを設定します。
+	 * 先頭から再生します。再生中の場合は失敗します。この関数はブロックします。
 	 */
-    public void play();
+    public void play() throws InterruptedException;
     /**
      * 再生を停止します。再生を停止すると再開できません。
      */
     public void stop();
     /**
-     * 再生が終わるまで規定時間待機します。
-     * 待機中に再生が完了した倍はTrueです。完了しない場合Falseです。
-     * @params timeout_in_msec
-     * -1で無限にブロックします。0で現状を返します。
-     * @throws InterruptedException 
+     * 再生が終了したか返します。
      */
-    public boolean waitForFinished(long timeout_in_msec) throws InterruptedException;
+    public boolean isFinished();
 }

@@ -28,6 +28,7 @@ void setup() {
 }
 long last_rxn;
 String recvd="";
+int dec_mode=0;
 void draw() {
 //print(modem.rxReady());
   background(0);
@@ -41,14 +42,28 @@ void draw() {
   text("byteReady " + (modem.rxReady()?"YES":"NO"),10,50);
   text("charReady " +(modem.rxAsCharReady()?"YES":"NO"),10,60);
   text("Signal#   " +rxnum,10,70);
-  if(modem.rxAsCharReady()){
-    if(last_rxn!=rxnum){
-      recvd="";
-      last_rxn=rxnum;
-    }
-    recvd=recvd+modem.rxAsChar();
+  switch(dec_mode){
+    case 0:break;
+    case 1:
+      if(modem.rxAsCharReady()){
+        if(last_rxn!=rxnum){
+          recvd="";
+          last_rxn=rxnum;
+        }
+        recvd=recvd+modem.rxAsChar();
+      }
+      break;
+    case 2:
+      if(modem.rxReady()){
+        if(last_rxn!=rxnum){
+          recvd="";
+          last_rxn=rxnum;
+        }
+        recvd=recvd+str(modem.rx())+" ";
+      }
+      break;
   }
-  println(recvd);
+
   text(recvd,10,80);
 }
 void keyPressed() {
@@ -56,7 +71,13 @@ void keyPressed() {
     if(modem.txReady()){
       modem.tx("Hello Processing",true);
     }
-  }else{
+  }else if(key=='B'||key=='b'){
     modem.txBreak();
+  }else if(key=='C'||key=='c'){
+    modem.rxClear();
+  }else if(key=='D'||key=='d'){
+    rxmode=(rxmode+1)%3;
+    print("rxmode "+str(rxmode))
+  }else{
   }
 }

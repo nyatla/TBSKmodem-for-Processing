@@ -20,4 +20,9 @@ public interface IAudioInputIterator extends IPyIterator<Double>,Closeable
 	 * @return
 	 */
 	public double getRMS();
+	/**
+	 * trueにセットされた場合には、返却値を全て0にする。
+	 * @param v
+	 */
+	public void mute(boolean v);
 }

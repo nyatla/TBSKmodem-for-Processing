@@ -10,13 +10,15 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-
+import java.util.concurrent.Semaphore;
+import java.util.function.Function;
 
 import jp.nyatla.tbskpsg.audioif.IAudioInputIterator;
 import jp.nyatla.tbskpsg.audioif.IAudioInterface;
 import jp.nyatla.tbskpsg.audioif.IAudioPlayer;
 
 import jp.nyatla.kokolink.compatibility;
+import jp.nyatla.kokolink.protocol.tbsk.traitblockcoder.TraitBlockDecoder;
 import jp.nyatla.kokolink.utils.BrokenTextStreamDecoder;
 import jp.nyatla.kokolink.utils.recoverable.RecoverableException;
 import jp.nyatla.tbskmodem.TbskDemodulator;
@@ -47,7 +49,7 @@ public class TbskModem
 		}
 	}
 	
-	private IAudioPlayer _async_player=null;
+
 	private TbskModulator _mod;
 	private TbskDemodulator _demod;
 	
@@ -121,7 +123,7 @@ public class TbskModem
 	/**
 	 * start Modem instance.
 	 */
-	public void start()
+	synchronized public void start()
 	{
 		if(this._rxtask!=null) {
 			throw new RuntimeException("Modem is already Running.");
@@ -137,7 +139,7 @@ public class TbskModem
 	/**
 	 * Stop Modem instance.
 	 */
-	public void stop()
+	synchronized public void stop()
 	{
 		if(this._rxtask==null) {
 			TbskModem.debug("Modem is already Stopped.");
@@ -262,7 +264,13 @@ public class TbskModem
 			 */
 			synchronized boolean available() {
 				return !(this._is_stop && this._q.isEmpty() && this._decoder.holdLen()==0);
-			}	
+			}
+			/**
+			 * このブロックの追加更新が停止していたらtrue
+			 */
+			synchronized boolean isStopped() {
+				return this._is_stop;
+			}
 		}
 
 		private List<RxData> _buf=new ArrayList<RxData>();
@@ -376,7 +384,16 @@ public class TbskModem
 				this._buf.remove(0);
 			}
 			return r;
-		}		
+		}
+		public void clear() {
+			while(!this._buf.isEmpty()) {
+				if(this._buf.get(0).isStopped()) {
+					this._buf.remove(0);
+				}else {
+					break;
+				}
+			}
+		}
 	}
 
 
@@ -465,6 +482,18 @@ public class TbskModem
 		synchronized long getNumber() {
 			return this._number;
 		}
+		synchronized void mute() {
+			TbskModem.debug("rx:mute");
+			this._input.mute(true);
+		}
+		synchronized void unmute() {
+			TbskModem.debug("rx:unmute");
+			this._input.mute(false);
+		}
+		synchronized void clear() {
+			this._rxb.clear();
+		}
+		
 	}
 	/**
 	 * This is the identification number of the TBSK signal that is currently received.
@@ -473,7 +502,7 @@ public class TbskModem
 	 * 現在受信しているTBSK信号の通し番号です。この番号はTBSK信号の境界識別に使用します。
 	 * @return
 	 */
-	public long rxNumber() {
+	synchronized public long rxNumber() {
 		return this._rxtask.getNumber();
 	}
 	/**
@@ -481,15 +510,24 @@ public class TbskModem
 	 * @return
 	 * True if {@link #rx()} is callable.
 	 */
-	public boolean rxReady() {
+	synchronized public boolean rxReady() {
 		return this._rxtask.ready();
 	}
+	/**
+	 * Clear RX buffer.
+	 * Current receiving packet is not be cleared.
+	 * @return
+	 */
+	synchronized public void rxClear() {
+		this._rxtask.clear();
+	}
+	
 	/**
 	 * Read 1 byte from buffer.
 	 * @return
 	 * 255>=n>=0
 	 */
-	public int rx() {
+	synchronized public int rx() {
 		return this._rxtask.read();		
 	}
 	/**
@@ -497,7 +535,7 @@ public class TbskModem
 	 * @return
 	 * True if {@link #rxAsChar()} is callable.
 	 */
-	public boolean rxAsCharReady() {
+	synchronized public boolean rxAsCharReady() {
 		return this._rxtask.readyChar();
 	}
 	/**
@@ -505,41 +543,96 @@ public class TbskModem
 	 * @return
 	 * UTF-8 encoded charactor. "?" is returned if bad encoding.
 	 */
-	public char rxAsChar() {
+	synchronized public char rxAsChar() {
 		return this._rxtask.readChar();		
 	}
 	
-
-
 	
+	
+	
+	private AsycPlayer _async_player=null;	
 	
 	/**
 	 * Return current tx progress status.
 	 * @return
 	 * True if previus tx is finished.
 	 */
-	public boolean txReady() {
-		try {
-			return this._async_player==null || this._async_player.waitForFinished(0);
-		} catch (InterruptedException e) {
-			throw new RuntimeException(e);
+	synchronized public boolean txReady() {
+		if(this._async_player!=null) {
+			if(this._async_player._finished) {
+				//finishedしてるなら待てばいい。
+				return true;
+			}
+			return false;
+		}else {
+			return this._async_player==null;			
 		}
 	}
 	/**
 	 * Break current processing send signal.
 	 * @return
 	 */
-	public void txBreak() {
+	synchronized public void txBreak() {
 		try {
-			if(this._async_player!=null && !this._async_player.waitForFinished(0)) {
+			if(this._async_player!=null) {
 				this._async_player.close();
 				this._async_player=null;
 			}
 		} catch (InterruptedException e) {
 			throw new RuntimeException(e);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
 		}
+	}
+	/**
+	 * プレイヤーが停止する迄待ってくれる。有難いクラス
+	 * なぜこんな馬鹿な仕組みになってるのかというと、そうせざる得ないからだ。
+	 *
+	 */
+	abstract class AsycPlayer
+	{
+		private IAudioPlayer _ap;
+		private Semaphore _se=new Semaphore(1);
+		private Thread _th;
+		private boolean _finished;
+		AsycPlayer(IAudioPlayer ap){
+			this._finished=false;
+			this._ap=ap;
+		}
+		//非同期再生を開始する。
+		void play() throws InterruptedException {
+			class Th extends Thread{
+				public void run() {
+					try {
+						_ap.play();
+						_se.release();//closeすると飛ぶはず。
+					} catch (InterruptedException e) {
+					}finally {
+						_finished=true;
+						onExpired();
+					}
+				}
+			}
+			this._se.acquire();
+			Th th=new Th();
+			th.run();
+			this._th=th;
+		}
+		public boolean getFinished() {
+			return this._finished;
+		}
+		void close() throws InterruptedException {
+			this._ap.stop();
+			this._th.interrupt();
+			try{
+				this._th.join();
+			}finally {
+				this._ap=null;
+			}
+		}
+		public void waitForEnd() throws InterruptedException {
+			this._se.acquire();//セマフォ待ち
+		}
+		abstract void onExpired();
+
 	}
 	/**
 	 * Send data via audio interface.
@@ -556,49 +649,60 @@ public class TbskModem
 			throw new RuntimeException("This instance has not Audio interface");
 		}
 		//有効な非同期プレイヤーが動作中なら再生が完了するまで待つ。
-		IAudioPlayer async_player=this._async_player;
-		if(async_player!=null) {
-			boolean wr;
-			try {
-				wr=async_player.waitForFinished(-1);
-			} catch (InterruptedException e1) {
-				throw new RuntimeException(e1);
-			}
-			if(wr) {
+		{
+			AsycPlayer pobs=this._async_player;
+			if(pobs!=null) {
 				try {
-					async_player.close();
-				} catch (IOException e) {
+					pobs.waitForEnd();
+				} catch (InterruptedException e) {
+					try {
+						pobs.close();
+					} catch (InterruptedException e1) {
+						throw new RuntimeException(e);
+					}//強制終了
+					throw new RuntimeException(e);					
+				}finally {
+					this._async_player=null;					
+				}
+			}
+		}
+		{
+			//新規再生
+			IAudioPlayer player=this._aif.createPlayer(s);
+			if(player==null) {
+				throw new RuntimeException("This instance has not Player interface");
+			}
+			if(!async) {
+				//同期
+				try {
+					this._rxtask.mute();
+					player.play();
+				} catch (InterruptedException e) {
 					throw new RuntimeException(e);
 				}finally {
-					this._async_player=null;
-				}
+					try {
+						player.close();
+					} catch (IOException e) {
+						throw new RuntimeException(e);
+					}
+					this._rxtask.unmute();
+				}				
 			}else {
-				throw new RuntimeException("Asynchronous send is in use. Wait until the txReady function becomes true.");
-			}			
-		}
-		assert(this._async_player==null);
-
-		//新規再生
-		IAudioPlayer player=this._aif.createPlayer(s);
-		if(player==null) {
-			throw new RuntimeException("This instance has not Player interface");
-		}
-		player.play();
-		if(!async) {
-			//同期送信ならブロックする
-			try {
-				player.waitForFinished(-1);
-			} catch (InterruptedException e) {
-				throw new RuntimeException(e);
-			}finally {
+				//非同期
+				AsycPlayer pobs=new AsycPlayer(player) {
+					@Override
+					void onExpired() {
+						_rxtask.unmute();
+					}
+				};
 				try {
-					player.close();
-				} catch (IOException e) {
-					throw new RuntimeException(e);
+					this._rxtask.mute();
+					pobs.play();
+				} catch (InterruptedException e) {
+					throw new RuntimeException(e);//起こらないはずなのだが。
 				}
+				this._async_player=pobs;
 			}
-		}else {
-			this._async_player=player;			
 		}
 	}
 
