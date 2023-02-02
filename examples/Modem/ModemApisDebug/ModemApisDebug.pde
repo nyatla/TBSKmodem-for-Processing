@@ -1,42 +1,44 @@
-import ddf.minim.*;
-
 /**
- * Modulated wave file.
+ * Debug application.
  */
+import ddf.minim.*;
 import jp.nyatla.tbskpsg.*;
 import jp.nyatla.tbskpsg.audioif.*;
 import jp.nyatla.tbskpsg.result.*;
 import jp.nyatla.tbskpsg.utils.*;
-float[] wave;
-String str;
+
 TbskTone tone=TbskTone.xpskSin();
 TbskPreamble preamble=TbskPreamble.coff(tone);
-
 TbskModem modem;
 
-
 void setup() {
+  size(320, 200);
+  noStroke();
+
+  print(Version.STRING);
   PFont font = createFont("Osaka", 10);
   textFont(font);
+
+  //Initialize modem instance with Audio interface
   Minim minim=new Minim(this);
   modem=new TbskModem(this,tone,preamble,new MinimAudioInterface(minim,16000));
   TbskModem._DEBUG=true;
+
+  // start Modem
   modem.start();
-  size(320, 200);
-  noStroke();
   last_rxn=modem.rxNumber();
 }
 long last_rxn;
 String recvd="";
 int dec_mode=0;
 void draw() {
-//print(modem.rxReady());
   background(0);
-  text("Hit 'A' key to send string!",10,10);
-  text(int(modem.acceptedSampleCount()),10,20);
-  
+  text("Hit 'A':tx,'B':break tx,'C':clear,'D':switch rx mode",10,10);
+  //Show status
+  text(int(modem.acceptedSampleCount()),10,20);  
   var vol=max(0,(log(modem.rms())+6.5)*3);
   rect(10,30,10+vol*10,10);
+  
 
   var rxnum=modem.rxNumber();
   text("byteReady " + (modem.rxReady()?"YES":"NO"),10,50);
@@ -69,15 +71,17 @@ void draw() {
 void keyPressed() {
   if(key=='A'||key=='a'){
     if(modem.txReady()){
-      modem.tx("Hello Processing",true);
+      println("OK1");
+      modem.tx("Hello Processing");
+      println("OK2");
     }
   }else if(key=='B'||key=='b'){
     modem.txBreak();
   }else if(key=='C'||key=='c'){
     modem.rxClear();
   }else if(key=='D'||key=='d'){
-    rxmode=(rxmode+1)%3;
-    print("rxmode "+str(rxmode))
+    dec_mode=(dec_mode+1)%3;
+    println("rxmode "+str(dec_mode));
   }else{
   }
 }

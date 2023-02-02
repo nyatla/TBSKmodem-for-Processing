@@ -12,6 +12,7 @@ TbskDemodulator demod=new TbskDemodulator(this,tone,preamble);
 float[] wave;
 String str;
 void setup() {
+  print(Version.STRING);
   size(640, 200);
   noStroke();
   //make waveform

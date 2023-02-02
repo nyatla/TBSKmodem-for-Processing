@@ -13,15 +13,18 @@ TbskDemodulator demod=new TbskDemodulator(this,tone,preamble);
 float[] wave;
 String str;
 void setup() {
+  print(Version.STRING);
   size(640, 200);
   noStroke();
+
+  //Modulation
   var waveresult=mod.modulate("Hello Processing");
 
-  //save to file
+  //Save to file
   var wavefile1=waveresult.toWaveFile(16000,.1f);
   wavefile1.save("./test.wav");
 
-  //load from file
+  //Load from file
   var wavefile2=(new WaveFile(this)).load("./test.wav");
   str=demod.demodulateAsStr(wavefile2).toString();
   wave=wavefile2.getFrame();
