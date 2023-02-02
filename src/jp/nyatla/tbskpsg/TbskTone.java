@@ -8,8 +8,8 @@ import jp.nyatla.kokolink.protocol.tbsk.toneblock.TraitTone;
 import jp.nyatla.kokolink.protocol.tbsk.toneblock.XPskSinTone;
 
 /**
- * TBSKの通信シンボルに使用するトーン信号です。
- * static関数で生成します。
+ * An instance that wraps the TBSK tone.
+ * Use static function instead of a constructor.
  */
 public class TbskTone
 {
@@ -25,7 +25,10 @@ public class TbskTone
 		return this._src;
 	}
 	/**
+	 * Multiply the volume of the tone signal by vol.
+	 * <br></br>
 	 * トーン信号の音量をvol倍します。
+	 * 
 	 * @param vol
 	 * @return
 	 */
@@ -35,14 +38,24 @@ public class TbskTone
 	}
 	
 	/**
+	 * Creates a phase-shifted sine wave, a type of spread spectrum signal.
+	 * <br><br/>
 	 * 位相をPN符号でシフトしたトーン信号を生成します。ティック数がpoints*cycle個のトーン信号を生成します。
 	 * トーン信号は、points個のサンプルで構成したSin一周期を、2π/div*pn[i]づつ位相をずらして再配置したスペクトラム信号です。
+	 * 
 	 * @param points
+	 * Number of point per 1 cycle.
+	 * <br></br>
 	 * 1周期のポイント数
+	 * 
 	 * @param cycle
-	 * 繰り返し回数
+	 * Number of cycle.
+	 * 
 	 * @param div
+	 * Number of phase shift divisions.
+	 * <br></br>
 	 * 位相シフトの分割数
+	 * 
 	 * @return
 	 * points*cycleのスペクトラム拡散信号。
 	 */
@@ -50,7 +63,7 @@ public class TbskTone
 		return new TbskTone(new XPskSinTone(points, cycle,div,null));
 	}
 	/**
-	 * divパラメータに8をセットした{{@link #createXPskSin()}です。
+	 * Same as xpskSin(points,cycle,8);
 	 * @param points
 	 * @param cycle
 	 * @return
@@ -67,23 +80,32 @@ public class TbskTone
 	}
 
 	/**
+	 * Create connected sin wave tone.
+	 * <br></br>
 	 * Sin波を結合したpoints*cycle個のトーン信号を生成します。
 	 * トーン信号は、周期がcycle個あるサイン波です。
 	 * @param points
+	 * Number of point per 1 cycle.
 	 * 1周期のポイント数
 	 * @param cycle
+	 * Number of cycle.
+	 * <br></br>
 	 * 繰り返し回数
 	 * @return
-	 * points*cycleのSin波
+	 * Tone which has points*cycle ticks.
 	 */
 	public static TbskTone sin(int points,int cycle) {
 		return new TbskTone(new SinTone(points, cycle));
 	}
+	/**
+	 * Same as sin(points,1)
+	 * @return
+	 */	
 	public static TbskTone sin(int points) {
 		return sin(points,1);
 	}
 	/**
-	 * point=10,cycle=10をセットした100tickのトーンです。
+	 * Same as sin(10,10)
 	 * @return
 	 */	
 	public static TbskTone sin() {
@@ -91,9 +113,13 @@ public class TbskTone
 	}
 
 	/**
+	 * Create tone instance with custom pattern.
+	 * <br></br>
 	 * カスタム形式のトーン信号を生成します。
 	 * @param d
+	 * [-1,1] array.
 	 * @return
+	 * new instance.
 	 */
 	public static <T>TbskTone custom(Iterable<Double> d) {
 		return new TbskTone(new TraitTone(d));

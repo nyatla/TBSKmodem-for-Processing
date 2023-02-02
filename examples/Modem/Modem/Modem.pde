@@ -16,24 +16,40 @@ TbskModem modem;
 
 
 void setup() {
+  PFont font = createFont("Osaka", 10);
+  textFont(font);
   Minim minim=new Minim(this);
   modem=new TbskModem(this,tone,preamble,new MinimAudioInterface(minim,16000));
   TbskModem._DEBUG=true;
   modem.start();
   size(320, 200);
   noStroke();
+  last_rxn=modem.rxNumber();
 }
-int s=0;
+long last_rxn;
+String recvd="";
 void draw() {
 //print(modem.rxReady());
   background(0);
   text("Hit 'A' key to send string!",10,10);
-  text(modem.acceptedSampleCount(),10,20);
-  text(modem.rms(),10,30);
-  text(modem.rxReady()?"YES":"NO",10,40);
-  if(modem.rxReadyAsChar()){
-    print(modem.rx());
+  text(int(modem.acceptedSampleCount()),10,20);
+  
+  var vol=max(0,(log(modem.rms())+6.5)*3);
+  rect(10,30,10+vol*10,10);
+
+  var rxnum=modem.rxNumber();
+  text("byteReady " + (modem.rxReady()?"YES":"NO"),10,50);
+  text("charReady " +(modem.rxAsCharReady()?"YES":"NO"),10,60);
+  text("Signal#   " +rxnum,10,70);
+  if(modem.rxAsCharReady()){
+    if(last_rxn!=rxnum){
+      recvd="";
+      last_rxn=rxnum;
+    }
+    recvd=recvd+modem.rxAsChar();
   }
+  println(recvd);
+  text(recvd,10,80);
 }
 void keyPressed() {
   if(key=='A'||key=='a'){

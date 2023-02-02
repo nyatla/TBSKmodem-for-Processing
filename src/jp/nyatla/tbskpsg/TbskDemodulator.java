@@ -8,10 +8,11 @@ import jp.nyatla.tbskpsg.result.DemodulateIterable;
 import processing.core.*;
 
 /**
+ * Demodulator of the waveform to data.
+ * <br/><br>
  * TbskModem for JavaのProcessingバインドです。
  * TBSK信号を配列や文字列へ復調します。
  */
-
 public class TbskDemodulator
 {
 	private jp.nyatla.tbskmodem.TbskDemodulator _demod;
@@ -24,28 +25,42 @@ public class TbskDemodulator
 
 	
 	
-	public final static TbskTone DEFAULT_TONE=TbskTone.xpskSin();
-	
-
+	/**
+	 * Create instance with specified tone and preamble.
+	 * @param parent
+	 * PApplet instance.
+	 * @param tone
+	 * Tone symbol for TBSK modulation.
+	 * @param preamble
+	 * Preamble format for TBSK modulation.
+	 */
 	public TbskDemodulator(PApplet parent,TbskTone tone,TbskPreamble preamble)
 	{
 		this._parent = parent;
 		this._demod=new jp.nyatla.tbskmodem.TbskDemodulator(tone.getBase(),preamble.getBase());
-		welcome();
 	}
+	/**
+	 * Same as TbskDemodulator(parent,TbskTone.xpskSin(),TbskPreamble.coff(TbskTone.xpskSin());
+	 * @param parent
+	 * PApplet instance.
+	 */	
 	public TbskDemodulator(PApplet parent)
 	{
 		this(parent,TbskTone.xpskSin(),TbskPreamble.coff(TbskTone.xpskSin()));
 	}	
 	
-	private void welcome() {
-		System.out.println(Version.STRING+" by Ryo Iizuka");
-	}
 	
 	
 
 
-
+	/**
+	 * Demodulate the waveform to an Iterable object of TBSK signals.
+	 * This demodulator only returns the first detected signal.
+	 * @param s
+	 * The waveform data.
+	 * @return
+	 * General purpose Iterable.
+	 */
 	public DemodulateIterable demodulate(Iterable<Double> s)
 	{	
 		try {
@@ -85,7 +100,13 @@ public class TbskDemodulator
 	
 
 
-	
+	/**
+	 * Demodulate the waveform to a string Iterable object of TBSK signals.
+	 * @param s
+	 * The waveform data.
+	 * @return
+	 * General purpose string Iterable.
+	 */	
 	public DemodulateAsStrIterable demodulateAsStr(Iterable<Double> s)
 	{
 		try {

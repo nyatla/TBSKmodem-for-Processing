@@ -10,8 +10,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+
 
 import jp.nyatla.tbskpsg.audioif.IAudioInputIterator;
 import jp.nyatla.tbskpsg.audioif.IAudioInterface;
@@ -34,13 +33,21 @@ import processing.core.*;
 
 public class TbskModem
 {
+	/**
+	 * Seacret flag!
+	 */
 	public static boolean _DEBUG=false;
+	/**
+	 * For debugging!
+	 * @param messgae
+	 */
 	static public void debug(String messgae) {
 		if(TbskModem._DEBUG) {
 			System.out.println(messgae);
 		}
 	}
 	
+	private IAudioPlayer _async_player=null;
 	private TbskModulator _mod;
 	private TbskDemodulator _demod;
 	
@@ -48,13 +55,23 @@ public class TbskModem
 	private PApplet _parent;
 
 
-	private IAudioInterface _aif;
+	final private IAudioInterface _aif;
 	private RxTask _rxtask;
+	final private int _baud;
 	
 	
-	public final static TbskTone DEFAULT_TONE=TbskTone.xpskSin();
 	
-
+	/**
+	 * Create modem instance attached Audio interface.
+	 * @param parent
+	 * PApplet instance.
+	 * @param tone
+	 * Tone symbol for TBSK modulation.
+	 * @param preamble
+	 * Preamble format for TBSK modulation.
+	 * @param aif
+	 * Aufio Interface.
+	 */
 	public TbskModem(PApplet parent,TbskTone tone,TbskPreamble preamble,IAudioInterface aif)
 	{
 		assert(aif!=null);
@@ -63,6 +80,7 @@ public class TbskModem
 		this._demod=new TbskDemodulator(tone.getBase(),preamble.getBase());
 		this._rxtask=null;
 		this._aif=aif;
+		this._baud=aif.getSampleRate()/tone.getBase().size();
 
 		try
 		{
@@ -76,26 +94,37 @@ public class TbskModem
 		{
 			e.printStackTrace();
 		}
-		welcome();
 	}
+	/**
+	 * Same as TbskModem(parent,TbskTone.xpskSin(),TbskPreamble.coff(TbskTone.xpskSin()),aif)
+	 * @param parent
+	 * PApplet instance.
+	 * @param aif
+	 * Aufio Interface.
+	 */
 	public TbskModem(PApplet parent,IAudioInterface aif)
 	{
 		this(parent,TbskTone.xpskSin(),TbskPreamble.coff(TbskTone.xpskSin()),aif);
 	}
-	
-	private void welcome() {
-		System.out.println(Version.STRING+" by Ryo Iizuka");
+	public float getBaud() {
+		return this._baud;
 	}
+	
+	/**
+	 * This function called from PApplet finalizer.
+	 */
 	public void dispose() {
 		TbskModem.debug("Enter dispose sequence.");
 		this.stop();
 	}
 	
-
+	/**
+	 * start Modem instance.
+	 */
 	public void start()
 	{
 		if(this._rxtask!=null) {
-			throw new RuntimeException("RxTask is already Running.");
+			throw new RuntimeException("Modem is already Running.");
 		}
 		IAudioInputIterator input=this._aif.createInputIterator();
 		if(input==null) {
@@ -105,10 +134,13 @@ public class TbskModem
 		task.start();
 		this._rxtask=task;
 	}
+	/**
+	 * Stop Modem instance.
+	 */
 	public void stop()
 	{
 		if(this._rxtask==null) {
-			TbskModem.debug("RxTask is already Stopped.");
+			TbskModem.debug("Modem is already Stopped.");
 			return;
 		}
 		this._rxtask.dispose();
@@ -116,12 +148,17 @@ public class TbskModem
 		this._rxtask=null;
 	}
 	/**
-	 * 1/100サンプルの平均RMS
+	 * RMS value of audio input.
+	 * RMS=√(Σ(sample[x]^2)/n),n=max(sampleRate/100,10)
+	 * <br></br>
+	 * 
 	 */
 	public float rms() {
 		return (float)this._rxtask._input.getRMS();
 	}
 	/**
+	 * For debugging. Received samples.
+	 * <br></br>
 	 * オーディオシステムが受信したサンプル数
 	 * @return
 	 */
@@ -182,31 +219,32 @@ public class TbskModem
 			synchronized boolean readyChar()
 			{
 				//関数は、dec.updateが動作するときだけtrueを返す。
-				BrokenTextStreamDecoder dec=this._decoder;				
-				if(!this.available()) {
+				BrokenTextStreamDecoder dec=this._decoder;
+				//現在のバッファでCharが構成できる場合
+				int l=dec.test();
+				if(l>0) {
+					return true;
+				}
+				//バッファが追加出来なくなるまでCharが構成できるか確認
+				while(!dec.isBufferFull()) {
+					if(this._q.size()>0) {
+						Integer tmp=this._q.poll();
+						assert(tmp!=null);							
+						l=dec.test(tmp.byteValue());
+						if(l>0) {
+							return true;
+						}
+					}else {
+						break;
+					}
+				}				
+				//バッファフルなら次のupdateは成功する
+				if(dec.isBufferFull()) {
+					return true;
+				}				
+				if(this._is_stop) {
 					//終端確定の場合はupdateで処理するから解析キューに文字があればtrue
 					return dec.holdLen()>0;
-				}else {
-					//現在のバッファでCharが構成できる場合
-					int l=dec.test();
-					if(l>0) {
-						return true;
-					}
-					//バッファが追加出来なくなるまでCharが構成できるか確認
-					while(!dec.isBufferFull()) {
-						if(this.readyInt()) {
-							l=dec.test((byte)this.getInt());
-							if(l>0) {
-								return true;
-							}
-						}else {
-							break;
-						}
-					}
-					//バッファフルなら次のupdateは成功する
-					if(dec.isBufferFull()) {
-						return true;
-					}
 				}
 				return false;
 			}
@@ -347,7 +385,9 @@ public class TbskModem
 		private TbskDemodulator _demod;
 		private RxBuffer _rxb;
 		private IAudioInputIterator _input;
+		private int _number;
 		public RxTask(TbskDemodulator demod,IAudioInputIterator input) {
+			this._number=0;
 			this._demod=demod;
 			this._input=input;
 			this._rxb=new RxBuffer();
@@ -355,7 +395,7 @@ public class TbskModem
 		public void run()
 		{
 			TbskModem.debug("start RxTask");
-			int number=0;
+			this._number=0;
 			for(;;) {
 				//bit iterableを起動	
 				TbskModem.debug("Preamble detection");
@@ -380,7 +420,7 @@ public class TbskModem
 				TbskModem.debug("Payload detection");
 				RxBuffer.RxData rxd;
 				synchronized(this) {
-					rxd=this._rxb.enter(number++);
+					rxd=this._rxb.enter(this._number++);
 				}
 				for(Integer i:iter) {	//このイテレータはInterruptでstopiterationを出す。
 					rxd.add(i);			//データ追記
@@ -422,17 +462,49 @@ public class TbskModem
 				}
 			}
 		}
+		synchronized long getNumber() {
+			return this._number;
+		}
 	}
-	
+	/**
+	 * This is the identification number of the TBSK signal that is currently received.
+	 * This is identifier of the boundaries of the received TBSK signal.
+	 * <br><br/>
+	 * 現在受信しているTBSK信号の通し番号です。この番号はTBSK信号の境界識別に使用します。
+	 * @return
+	 */
+	public long rxNumber() {
+		return this._rxtask.getNumber();
+	}
+	/**
+	 * Status of {#rx()}.
+	 * @return
+	 * True if {@link #rx()} is callable.
+	 */
 	public boolean rxReady() {
 		return this._rxtask.ready();
 	}
+	/**
+	 * Read 1 byte from buffer.
+	 * @return
+	 * 255>=n>=0
+	 */
 	public int rx() {
 		return this._rxtask.read();		
 	}
-	public boolean rxReadyAsChar() {
+	/**
+	 * Status of {#rxAsChar()}.
+	 * @return
+	 * True if {@link #rxAsChar()} is callable.
+	 */
+	public boolean rxAsCharReady() {
 		return this._rxtask.readyChar();
 	}
+	/**
+	 * Read 1 character from buffer.
+	 * @return
+	 * UTF-8 encoded charactor. "?" is returned if bad encoding.
+	 */
 	public char rxAsChar() {
 		return this._rxtask.readChar();		
 	}
@@ -441,10 +513,10 @@ public class TbskModem
 
 	
 	
-	private IAudioPlayer _async_player=null;
 	/**
-	 * Return tx enable.
+	 * Return current tx progress status.
 	 * @return
+	 * True if previus tx is finished.
 	 */
 	public boolean txReady() {
 		try {
@@ -470,9 +542,13 @@ public class TbskModem
 		}
 	}
 	/**
-	 * トランザクションを送信する。
+	 * Send data via audio interface.
+	 * This function can only be used when {@link #txReady()} is True.
 	 * @param s
+	 * The data is modulated into one signal.
 	 * @param async
+	 * Asynchronous flag. If true, the signal will be sent asynchronously.
+	 * @return
 	 */
 	synchronized public void tx(ModulateIterable s,boolean async)
 	{
@@ -525,16 +601,6 @@ public class TbskModem
 			this._async_player=player;			
 		}
 	}
-	
-	/**
-	 * Modulate the sequence with TBSK.
-	 * This function can only be used when {@link #txReady()} is True.
-	 * @param s
-	 * The data is modulated into one signal.
-	 * @param async
-	 * Asynchronous flag. If true, the signal will be sent asynchronously.
-	 * @return
-	 */
 
 	public void tx(Iterable<Integer> s,boolean async) {
 		this.tx(new ModulateIterable(this._parent,this._mod.modulate(s,8)), async);
@@ -565,7 +631,12 @@ public class TbskModem
 		}		
 	}
 
-	
+	/**
+	 * Same as {{@link #tx(any,true)}.
+	 * @param s
+	 * The data is modulated into one signal.
+	 * @return
+	 */	
 	public void tx(Iterable<Integer> s) {
 		this.tx(s,true);
 	}
@@ -591,7 +662,6 @@ public class TbskModem
 		this.tx(s,true);
 	}
 
-	//Processing familier function
 
 
 	/**
