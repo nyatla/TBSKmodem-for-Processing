@@ -38,7 +38,7 @@ void draw() {
 
   //Show status
   text(int(modem.acceptedSampleCount()),10,20);  
-  var vol=max(0,(log(modem.rms())+6.5)*3);
+  var vol=max(0,(log(modem.rms())+5)*3);
   rect(10,30,10+vol*10,10);  
   var rxnum=modem.rxNumber();
   text("byteReady " + (modem.rxReady()?"YES":"NO"),10,50);

@@ -36,7 +36,7 @@ void draw() {
   text("Hit 'A':tx,'B':break tx,'C':clear,'D':switch rx mode",10,10);
   //Show status
   text(int(modem.acceptedSampleCount()),10,20);  
-  var vol=max(0,(log(modem.rms())+6.5)*3);
+  var vol=max(0,(log(modem.rms())+5)*3);
   rect(10,30,10+vol*10,10);
   
 
