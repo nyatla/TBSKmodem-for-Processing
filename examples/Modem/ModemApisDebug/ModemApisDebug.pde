@@ -82,6 +82,8 @@ void keyPressed() {
   }else if(key=='D'||key=='d'){
     dec_mode=(dec_mode+1)%3;
     println("rxmode "+str(dec_mode));
+  }else if(key=='E'||key=='e'){
+    modem.rxBreak();
   }else{
   }
 }

@@ -60,6 +60,10 @@ public class TbskModem
 	final private IAudioInterface _aif;
 	private RxTask _rxtask;
 	final private int _baud;
+	/**
+	 * TX終了後のガードタイム
+	 */
+	private int _tx_guard_sleep;
 	
 	
 	
@@ -83,6 +87,8 @@ public class TbskModem
 		this._rxtask=null;
 		this._aif=aif;
 		this._baud=aif.getSampleRate()/tone.getBase().size();
+		this._tx_guard_sleep=preamble.getBase().getNumberOfTicks()/aif.getSampleRate();
+
 
 		try
 		{
@@ -108,7 +114,10 @@ public class TbskModem
 	{
 		this(parent,TbskTone.xpskSin(),TbskPreamble.coff(TbskTone.xpskSin()),aif);
 	}
-	public float getBaud() {
+	public int sampleRate() {
+		return this._aif.getSampleRate();
+	}
+	public float baud() {
 		return this._baud;
 	}
 	
@@ -211,7 +220,7 @@ public class TbskModem
 				if(this._decoder.holdLen()>0) {
 					int r=this._decoder.peekFront();
 					this._decoder.shift(1);
-					return (int)(0xff & r);
+					return (0xff & r);
 				}else {
 					Integer r=this._q.poll();
 					assert(r!=null);
@@ -271,6 +280,14 @@ public class TbskModem
 			synchronized boolean isStopped() {
 				return this._is_stop;
 			}
+			/**
+			 * 格納しているバイト数
+			 * @return
+			 */
+			synchronized int size() {
+				return this._q.size()+this._decoder.holdLen();
+			}
+			
 		}
 
 		private List<RxData> _buf=new ArrayList<RxData>();
@@ -300,6 +317,16 @@ public class TbskModem
 			List<RxData> buf=this._buf;
 			RxData d=buf.get(buf.size()-1);
 			d.add(v);
+		}
+		/**
+		 * 先頭キューのデータサイズを返します。
+		 * @return
+		 */
+		public int currentSize() {
+			if(this._buf.isEmpty()) {
+				return 0;
+			}
+			return this._buf.get(0).size();
 		}
 		/**
 		 * getが実行可能状態であるかを返す。
@@ -394,6 +421,17 @@ public class TbskModem
 				}
 			}
 		}
+		/**
+		 * バッファ全体のサイズを返す。
+		 * @return
+		 */
+		public int totalSize() {
+			int r=0;
+			for(RxData d:this._buf) {
+				r=r+d.size();
+			}
+			return r;			
+		}
 	}
 
 
@@ -403,6 +441,7 @@ public class TbskModem
 		private RxBuffer _rxb;
 		private IAudioInputIterator _input;
 		private int _number;
+		private boolean _break_flag;
 		public RxTask(TbskDemodulator demod,IAudioInputIterator input) {
 			this._number=0;
 			this._demod=demod;
@@ -439,7 +478,12 @@ public class TbskModem
 				synchronized(this) {
 					rxd=this._rxb.enter(this._number++);
 				}
+				this._break_flag=false;	//RX中断リセット
 				for(Integer i:iter) {	//このイテレータはInterruptでstopiterationを出す。
+					if(this._break_flag)//RX中断確認
+					{
+						break;
+					}
 					rxd.add(i);			//データ追記
 				}
 				rxd.stop();//停止
@@ -493,6 +537,15 @@ public class TbskModem
 		synchronized void clear() {
 			this._rxb.clear();
 		}
+		synchronized int totalSize() {
+			return this._rxb.totalSize();
+		}
+		synchronized int currentSize() {
+			return this._rxb.currentSize();
+		}
+		synchronized public void rxBreak() {
+			this._break_flag=true;
+		}
 		
 	}
 	/**
@@ -545,6 +598,31 @@ public class TbskModem
 	 */
 	synchronized public char rxAsChar() {
 		return this._rxtask.readChar();		
+	}
+	/**
+	 * Number of total bytes onrx buffer.
+	 * <br></br>
+	 * rxキュー全体の格納サイズです
+	 * @return
+	 */
+	synchronized public int rxTotalSize() {
+		return this._rxtask.totalSize();
+	}
+	/**
+	 * 先頭にあるカレントrxキューのサイズです。
+	 * この値はシグナル単位です。
+	 * @return
+	 */
+	public int rxCurrentSize() {
+		return this._rxtask.currentSize();
+	}
+	/**
+	 * Break current rx receiving
+	 * <br></br>
+	 * パケットを受信中なら打ち切ります。
+	 */
+	public void rxBreak() {
+		this._rxtask.rxBreak();
 	}
 	
 	
@@ -654,6 +732,7 @@ public class TbskModem
 			if(pobs!=null) {
 				try {
 					pobs.waitForEnd();
+					Thread.sleep(this._tx_guard_sleep);					
 				} catch (InterruptedException e) {
 					try {
 						pobs.close();
@@ -677,6 +756,8 @@ public class TbskModem
 				try {
 					this._rxtask.mute();
 					player.play();
+					//Txスリープはプリアンブル分くらい
+					Thread.sleep(this._tx_guard_sleep);					
 				} catch (InterruptedException e) {
 					throw new RuntimeException(e);
 				}finally {
@@ -697,8 +778,7 @@ public class TbskModem
 				};
 				try {
 					this._rxtask.mute();
-					pobs.play();
-					
+					pobs.play();					
 				} catch (InterruptedException e) {
 					throw new RuntimeException(e);//起こらないはずなのだが。
 				}
@@ -765,6 +845,12 @@ public class TbskModem
 	}
 	public void tx(String s) {
 		this.tx(s,true);
+	}
+	public void tx(char[] s) {		
+		this.tx(String.valueOf(s),true);
+	}
+	public void tx(Character[] s) {
+		this.tx(String.valueOf(s),true);
 	}
 
 
