@@ -11,14 +11,12 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.Semaphore;
-import java.util.function.Function;
 
 import jp.nyatla.tbskpsg.audioif.IAudioInputIterator;
 import jp.nyatla.tbskpsg.audioif.IAudioInterface;
 import jp.nyatla.tbskpsg.audioif.IAudioPlayer;
 
-import jp.nyatla.kokolink.compatibility;
-import jp.nyatla.kokolink.protocol.tbsk.traitblockcoder.TraitBlockDecoder;
+import jp.nyatla.kokolink.compatibility.Functions;
 import jp.nyatla.kokolink.utils.BrokenTextStreamDecoder;
 import jp.nyatla.kokolink.utils.recoverable.RecoverableException;
 import jp.nyatla.tbskmodem.TbskDemodulator;
@@ -791,22 +789,22 @@ public class TbskModem
 		this.tx(new ModulateIterable(this._parent,this._mod.modulate(s,8)), async);
 	}
 	public void tx(Integer[] s,boolean async) {
-		this.tx(new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8)), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8)), async);
 	}
 	public void tx(Short[] s,boolean async) {
-		this.tx(new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8)), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8)), async);
 	}
 	public void tx(Byte[] s,boolean async) {
-		this.tx(new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8)), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8)), async);
 	}
 	public void tx(int[] s,boolean async) {
-		this.tx(new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8)), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8)), async);
 	}
 	public void tx(short[] s,boolean async) {
-		this.tx(new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8)), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8)), async);
 	}
 	public void tx(byte[] s,boolean async) {
-		this.tx(new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8)), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8)), async);
 	}
 	public void tx(String s,boolean async) {
 		try {

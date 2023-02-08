@@ -3,7 +3,7 @@ package jp.nyatla.tbskpsg;
 
 
 import java.io.UnsupportedEncodingException;
-import jp.nyatla.kokolink.compatibility;
+import jp.nyatla.kokolink.compatibility.Functions;
 import jp.nyatla.tbskpsg.result.ModulateIterable;
 import processing.core.*;
 
@@ -65,22 +65,22 @@ public class TbskModulator
 		return new ModulateIterable(this._parent,this._mod.modulate(s,8));
 	}
 	public ModulateIterable modulate(Integer[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8));
+		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8));
 	}
 	public ModulateIterable modulate(Short[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8));
+		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8));
 	}
 	public ModulateIterable modulate(Byte[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8));
+		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8));
 	}
 	public ModulateIterable modulate(int[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8));
+		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8));
 	}
 	public ModulateIterable modulate(short[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8));
+		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8));
 	}
 	public ModulateIterable modulate(byte[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(compatibility.toIntegerPyIterator(s),8));
+		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8));
 	}
 	public ModulateIterable modulate(String s){
 		try {

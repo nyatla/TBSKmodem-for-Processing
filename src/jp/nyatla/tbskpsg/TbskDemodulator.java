@@ -1,6 +1,6 @@
 package jp.nyatla.tbskpsg;
 
-import jp.nyatla.kokolink.compatibility;
+import jp.nyatla.kokolink.compatibility.Functions;
 import jp.nyatla.kokolink.utils.recoverable.RecoverableException;
 import jp.nyatla.tbskpsg.utils.WaveFile;
 import jp.nyatla.tbskpsg.result.DemodulateAsStrIterable;
@@ -72,7 +72,7 @@ public class TbskDemodulator
 	public DemodulateIterable demodulate(Double[] s)
 	{
 		try {
-			return new DemodulateIterable(this._parent,this._demod.demodulateAsInt(compatibility.toDoublePyIterator(s)));
+			return new DemodulateIterable(this._parent,this._demod.demodulateAsInt(Functions.toDoublePyIterator(s)));
 		} catch (RecoverableException e) {
 			return null;
 		}
@@ -80,7 +80,7 @@ public class TbskDemodulator
 	public DemodulateIterable demodulate(double[] s)
 	{
 		try {
-			return new DemodulateIterable(this._parent,this._demod.demodulateAsInt(compatibility.toDoublePyIterator(s)));
+			return new DemodulateIterable(this._parent,this._demod.demodulateAsInt(Functions.toDoublePyIterator(s)));
 		} catch (RecoverableException e) {
 			return null;
 		}
@@ -88,7 +88,7 @@ public class TbskDemodulator
 	public DemodulateIterable demodulate(float[] s)
 	{
 		try {
-			return new DemodulateIterable(this._parent,this._demod.demodulateAsInt(compatibility.toDoublePyIterator(s)));
+			return new DemodulateIterable(this._parent,this._demod.demodulateAsInt(Functions.toDoublePyIterator(s)));
 		} catch (RecoverableException e) {
 			return null;
 		}
@@ -118,7 +118,7 @@ public class TbskDemodulator
 	public DemodulateAsStrIterable demodulateAsStr(Double[] s)
 	{
 		try {
-			return new DemodulateAsStrIterable(this._parent,this._demod.demodulateAsStr(compatibility.toDoublePyIterator(s),"utf-8"));
+			return new DemodulateAsStrIterable(this._parent,this._demod.demodulateAsStr(Functions.toDoublePyIterator(s),"utf-8"));
 		} catch (RecoverableException e) {
 			return null;
 		}
@@ -126,7 +126,7 @@ public class TbskDemodulator
 	public DemodulateAsStrIterable demodulateAsStr(double[] s)
 	{
 		try {
-			return new DemodulateAsStrIterable(this._parent,this._demod.demodulateAsStr(compatibility.toDoublePyIterator(s),"utf-8"));
+			return new DemodulateAsStrIterable(this._parent,this._demod.demodulateAsStr(Functions.toDoublePyIterator(s),"utf-8"));
 		} catch (RecoverableException e) {
 			return null;
 		}		
@@ -134,7 +134,7 @@ public class TbskDemodulator
 	public DemodulateAsStrIterable demodulateAsStr(float[] s)
 	{
 		try {
-			return new DemodulateAsStrIterable(this._parent,this._demod.demodulateAsStr(compatibility.toDoublePyIterator(s),"utf-8"));
+			return new DemodulateAsStrIterable(this._parent,this._demod.demodulateAsStr(Functions.toDoublePyIterator(s),"utf-8"));
 		} catch (RecoverableException e) {
 			return null;
 		}		
