@@ -17,6 +17,7 @@ import jp.nyatla.tbskpsg.audioif.IAudioInterface;
 import jp.nyatla.tbskpsg.audioif.IAudioPlayer;
 
 import jp.nyatla.kokolink.compatibility.Functions;
+import jp.nyatla.kokolink.protocol.tbsk.preamble.CoffPreamble;
 import jp.nyatla.kokolink.utils.BrokenTextStreamDecoder;
 import jp.nyatla.kokolink.utils.recoverable.RecoverableException;
 import jp.nyatla.tbskmodem.TbskDemodulator;
@@ -34,9 +35,11 @@ import processing.core.*;
 public class TbskModem
 {
 	/**
-	 * Seacret flag!
+	 * Seacret flags!
 	 */
 	public static boolean _DEBUG=false;
+	public static boolean _STOPSYMBOL=true;
+	
 	/**
 	 * For debugging!
 	 * @param messgae
@@ -65,8 +68,46 @@ public class TbskModem
 	
 	
 	
+
 	/**
-	 * Create modem instance attached Audio interface.
+	 * @see {@link TbskModem#TbskModem(PApplet, TbskTone, float, int, IAudioInterface)}
+	 * @param parent
+	 * @param tone
+	 * @param aif
+	 */
+	public TbskModem(PApplet parent,TbskTone tone,IAudioInterface aif)
+	{
+		this(parent,tone,(float)CoffPreamble.DEFAULT_TH,CoffPreamble.DEFAULT_CYCLE,aif);
+	}
+	/**
+	 * TBSK信号復調器のコンストラクタです。
+	 * @param parent
+	 * processingアプレットのインスタンス
+	 * @param tone
+	 * トーン信号のインスタンス
+	 * @param preamble_th
+	 * 信号の検出閾値
+	 * @param preamble_cycle
+	 * プリアンブルのシンボルサイクル数	 * 
+	 */
+	public TbskModem(PApplet parent,TbskTone tone,float preamble_th,int preamble_cycle,IAudioInterface aif)
+	{	
+		this(parent,tone,TbskPreamble.coff(tone, preamble_th, preamble_cycle),aif);
+	}
+	
+	/**
+	 * @see {@link TbskModem#TbskModem(PApplet, TbskTone, float, int, IAudioInterface)}
+	 * @param parent
+	 * @param aif
+	 */
+	public TbskModem(PApplet parent,IAudioInterface aif)
+	{
+		this(parent,TbskTone.xpskSin(),aif);
+	}
+	
+	/**
+	 * @deprecated
+	 * TbskModemのコンストラクタです.
 	 * @param parent
 	 * PApplet instance.
 	 * @param tone
@@ -100,18 +141,9 @@ public class TbskModem
 		{
 			e.printStackTrace();
 		}
-	}
-	/**
-	 * Same as TbskModem(parent,TbskTone.xpskSin(),TbskPreamble.coff(TbskTone.xpskSin()),aif)
-	 * @param parent
-	 * PApplet instance.
-	 * @param aif
-	 * Aufio Interface.
-	 */
-	public TbskModem(PApplet parent,IAudioInterface aif)
-	{
-		this(parent,TbskTone.xpskSin(),TbskPreamble.coff(TbskTone.xpskSin()),aif);
-	}
+	}	
+	
+	
 	public int sampleRate() {
 		return this._aif.getSampleRate();
 	}
@@ -120,7 +152,7 @@ public class TbskModem
 	}
 	
 	/**
-	 * This function called from PApplet finalizer.
+	 * この関数はPAppletのファイナライザから呼び出されます。
 	 */
 	public void dispose() {
 		TbskModem.debug("Enter dispose sequence.");
@@ -128,7 +160,7 @@ public class TbskModem
 	}
 	
 	/**
-	 * start Modem instance.
+	 * モデムの動作を開始します。成功すると、受信タスクが起動します。
 	 */
 	synchronized public void start()
 	{
@@ -144,7 +176,7 @@ public class TbskModem
 		this._rxtask=task;
 	}
 	/**
-	 * Stop Modem instance.
+	 * モデムの動作を停止します。
 	 */
 	synchronized public void stop()
 	{
@@ -157,17 +189,14 @@ public class TbskModem
 		this._rxtask=null;
 	}
 	/**
-	 * RMS value of audio input.
+	 * 入力した波形データのRMS値を返します。
 	 * RMS=√(Σ(sample[x]^2)/n),n=max(sampleRate/100,10)
-	 * <br></br>
 	 * 
 	 */
 	public float rms() {
 		return (float)this._rxtask._input.getRMS();
 	}
 	/**
-	 * For debugging. Received samples.
-	 * <br></br>
 	 * オーディオシステムが受信したサンプル数
 	 * @return
 	 */
@@ -189,7 +218,7 @@ public class TbskModem
 			private Deque<Integer> _q=new ArrayDeque<Integer>();
 			private BrokenTextStreamDecoder _decoder=new BrokenTextStreamDecoder("utf-8");
 			private final int _number;
-			private boolean _is_stop;
+			private boolean _is_stop;//フレームが確定するとtrue
 			public RxData(int number)
 			{
 				this._number=number;
@@ -204,10 +233,18 @@ public class TbskModem
 			}
 			synchronized public boolean add(Integer v) {
 				return this._q.add(v);
-			}		
+			}
+			/**
+			 * フレームが確定したら呼び出す。
+			 */
 			synchronized void stop() {
 				this._is_stop=true;
 			}
+			synchronized boolean readyFrame()
+			{
+				return this._is_stop;
+			}
+			
 			synchronized boolean readyInt()
 			{
 				return this._q.size()>0 || this._decoder.holdLen()>0;
@@ -380,6 +417,16 @@ public class TbskModem
 			}
 			return false;
 		}
+		public boolean readyFrame()
+		{
+			List<RxData> buf=this._buf;
+			if(buf.size()<=1 || !buf.get(0).readyFrame()) {
+				return false;
+			}
+			return true;	
+		}
+		
+
 		/**
 		 * 1バイトのデータを返す
 		 * @return
@@ -504,6 +551,9 @@ public class TbskModem
 				throw new RuntimeException("Not ready(Q).");
 			}
 			return this._rxb.getChar();
+		}
+		synchronized public boolean readyFrame() {
+			return this._rxb.readyFrame();
 		}		
 		synchronized public void dispose() {
 			this.interrupt();//ここでキューが飛んでrunの待機関数がStopiterationで停止する。
@@ -547,9 +597,6 @@ public class TbskModem
 		
 	}
 	/**
-	 * This is the identification number of the TBSK signal that is currently received.
-	 * This is identifier of the boundaries of the received TBSK signal.
-	 * <br><br/>
 	 * 現在受信しているTBSK信号の通し番号です。この番号はTBSK信号の境界識別に使用します。
 	 * @return
 	 */
@@ -557,7 +604,7 @@ public class TbskModem
 		return this._rxtask.getNumber();
 	}
 	/**
-	 * Status of {#rx()}.
+	 * {#rx()}が利用可能ならTrueを返します。
 	 * @return
 	 * True if {@link #rx()} is callable.
 	 */
@@ -565,8 +612,8 @@ public class TbskModem
 		return this._rxtask.ready();
 	}
 	/**
-	 * Clear RX buffer.
-	 * Current receiving packet is not be cleared.
+	 * 現在のフレームが確定済みであればクリアします。
+	 * 未確定ならクリアしません。
 	 * @return
 	 */
 	synchronized public void rxClear() {
@@ -574,7 +621,7 @@ public class TbskModem
 	}
 	
 	/**
-	 * Read 1 byte from buffer.
+	 * 1バイトを符号なし整数で読みだします。
 	 * @return
 	 * 255>=n>=0
 	 */
@@ -582,7 +629,7 @@ public class TbskModem
 		return this._rxtask.read();		
 	}
 	/**
-	 * Status of {#rxAsChar()}.
+	 * {#rxAsChar()}が利用可能ならTrueを返します。
 	 * @return
 	 * True if {@link #rxAsChar()} is callable.
 	 */
@@ -590,13 +637,20 @@ public class TbskModem
 		return this._rxtask.readyChar();
 	}
 	/**
-	 * Read 1 character from buffer.
+	 * 文字を読み出します。
 	 * @return
 	 * UTF-8 encoded charactor. "?" is returned if bad encoding.
 	 */
 	synchronized public char rxAsChar() {
 		return this._rxtask.readChar();		
-	}
+	}	
+	/**
+	 * 受信の完了したTBSKフレームを読みだせる場合、Trueを返します。
+	 */
+	public boolean readyFrame() {
+		return this._rxtask.readyFrame();
+	}	
+
 	/**
 	 * Number of total bytes onrx buffer.
 	 * <br></br>
@@ -615,8 +669,6 @@ public class TbskModem
 		return this._rxtask.currentSize();
 	}
 	/**
-	 * Break current rx receiving
-	 * <br></br>
 	 * パケットを受信中なら打ち切ります。
 	 */
 	public void rxBreak() {
@@ -625,13 +677,12 @@ public class TbskModem
 	
 	
 	
-	
 	private AsycPlayer _async_player=null;	
 	
 	/**
-	 * Return current tx progress status.
+	 * tx関数の状態を返します。非同期送信の場合に有効です。
 	 * @return
-	 * True if previus tx is finished.
+	 * Trueの場合、tx関数は非同期で動作中です。
 	 */
 	synchronized public boolean txReady() {
 		if(this._async_player!=null) {
@@ -645,7 +696,7 @@ public class TbskModem
 		}
 	}
 	/**
-	 * Break current processing send signal.
+	 * 送信中の非同期トランザクションを中止します。
 	 * @return
 	 */
 	synchronized public void txBreak() {
@@ -711,13 +762,11 @@ public class TbskModem
 
 	}
 	/**
-	 * Send data via audio interface.
-	 * This function can only be used when {@link #txReady()} is True.
+	 * sをTBSK変調して発信します。
 	 * @param s
-	 * The data is modulated into one signal.
+	 * 変調元の符号なし8bit整数
 	 * @param async
-	 * Asynchronous flag. If true, the signal will be sent asynchronously.
-	 * @return
+	 * 非同期送信フラグです。trueの場合、送信の終了を待たずに関数が返ります。
 	 */
 	synchronized public void tx(ModulateIterable s,boolean async)
 	{
@@ -786,39 +835,36 @@ public class TbskModem
 	}
 
 	public void tx(Iterable<Integer> s,boolean async) {
-		this.tx(new ModulateIterable(this._parent,this._mod.modulate(s,8)), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(s,8,_STOPSYMBOL)), async);
 	}
 	public void tx(Integer[] s,boolean async) {
-		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8)), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8,_STOPSYMBOL)), async);
 	}
 	public void tx(Short[] s,boolean async) {
-		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8)), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8,_STOPSYMBOL)), async);
 	}
 	public void tx(Byte[] s,boolean async) {
-		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8)), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8,_STOPSYMBOL)), async);
 	}
 	public void tx(int[] s,boolean async) {
-		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8)), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8,_STOPSYMBOL)), async);
 	}
 	public void tx(short[] s,boolean async) {
-		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8)), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8,_STOPSYMBOL)), async);
 	}
 	public void tx(byte[] s,boolean async) {
-		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8)), async);
+		this.tx(new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8,_STOPSYMBOL)), async);
 	}
 	public void tx(String s,boolean async) {
 		try {
-			this.tx(new ModulateIterable(this._parent,this._mod.modulate(s)),async);
+			this.tx(new ModulateIterable(this._parent,this._mod.modulate(s,_STOPSYMBOL)),async);
 		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException(e);
 		}		
 	}
 
 	/**
-	 * Same as {{@link #tx(any,true)}.
-	 * @param s
-	 * The data is modulated into one signal.
-	 * @return
+	 * @see {@link #tx(Integer[], boolean)
 	 */	
 	public void tx(Iterable<Integer> s) {
 		this.tx(s,true);

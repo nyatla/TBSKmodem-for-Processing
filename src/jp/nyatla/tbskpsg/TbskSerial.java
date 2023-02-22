@@ -9,16 +9,42 @@ import java.nio.charset.CharsetEncoder;
 
 import jp.nyatla.tbskpsg.audioif.IAudioInterface;
 import processing.core.PApplet;
+import jp.nyatla.kokolink.protocol.tbsk.preamble.CoffPreamble;
 
 /**
- * Serial like interface for TBSK modem.
- * Those functions are not implemented in this version!
+ * ProcessingのSerialと同じ型式の関数を持つTBSKmodemのラッパーです。
+ * 以下の関数は使用できません。
  * readStringUntil,serialEvent,readBytesUntil,buffer,bufferUntil
  *
  */
 public class TbskSerial {
 	final private TbskModem _modem;
+	public TbskSerial(PApplet parent,IAudioInterface aif) {
+		this(parent,TbskTone.xpskSin(),aif);
+	}
+	public TbskSerial(PApplet parent,TbskTone tone,IAudioInterface aif)
+	{
+		this(parent,tone,(float)CoffPreamble.DEFAULT_TH,CoffPreamble.DEFAULT_CYCLE,aif);
+	}
 	/**
+	 * インスタンスのコンストラクタです。
+	 * modemの機能は生成と同時に利用可能になります。
+	 * @param parent
+	 * processingアプレットのインスタンス
+	 * @param tone
+	 * トーン信号のインスタンス
+	 * @param preamble_th
+	 * 信号の検出閾値
+	 * @param preamble_cycle
+	 * プリアンブルのシンボルサイクル数	 * 
+	 */
+	public TbskSerial(PApplet parent,TbskTone tone,float preamble_th,int preamble_cycle,IAudioInterface aif)
+	{	
+		this._modem=new TbskModem(parent,tone, preamble_th, preamble_cycle,aif);
+		this._modem.start();
+	}	
+	/**
+	 * @deprecated
 	 * Create modem instance attached Audio interface.
 	 * @param parent
 	 * PApplet instance.
@@ -33,9 +59,10 @@ public class TbskSerial {
 		this._modem=new TbskModem(parent,tone,preamble,aif);
 		this._modem.start();
 	}
-	public TbskSerial(PApplet parent,IAudioInterface aif) {
-		this(parent,TbskTone.xpskSin(),TbskPreamble.coff(TbskTone.xpskSin()),aif);
-	}
+	
+	
+	
+	
 	/**
 	 * Danger ZONE!!
 	 * Low level modem interface.

@@ -1,7 +1,7 @@
 package jp.nyatla.tbskpsg;
 
 
-
+import jp.nyatla.kokolink.protocol.tbsk.preamble.CoffPreamble;
 import java.io.UnsupportedEncodingException;
 import jp.nyatla.kokolink.compatibility.Functions;
 import jp.nyatla.tbskpsg.result.ModulateIterable;
@@ -22,13 +22,14 @@ public class TbskModulator
 
 
 	/**
-	 * Create instance with specified tone and preamble.
+	 * @deprecated
+	 * トーンとプリアンブルを指定してインスタンスを構築します。
 	 * @param parent
-	 * PApplet instance.
+	 * アプレットのインスタンスです。
 	 * @param tone
-	 * Tone symbol for TBSK modulation.
+	 * トーン信号のインスタンスです。
 	 * @param preamble
-	 * Preamble format for TBSK modulation.
+	 * プリアンブルのインスタンスです。プリアンブルはtoneから作られたものを推奨します。
 	 */
 	public TbskModulator(PApplet parent,TbskTone tone,TbskPreamble preamble)
 	{
@@ -36,14 +37,37 @@ public class TbskModulator
 		this._mod=new jp.nyatla.tbskmodem.TbskModulator(tone.getBase(),preamble.getBase());
 	}
 	/**
-	 * Same as TbskModulator(parent,TbskTone.xpskSin(),TbskPreamble.coff(TbskTone.xpskSin());
+	 * @see {@link TbskModulator#TbskModulator(PApplet, TbskTone, TbskPreamble)}
 	 * @param parent
-	 * PApplet instance.
-	 */		
+	 * @param tone
+	 */
 	public TbskModulator(PApplet parent)
 	{
-		this(parent,TbskTone.xpskSin(),TbskPreamble.coff(TbskTone.xpskSin()));
-	}	
+		this(parent,TbskTone.xpskSin(),CoffPreamble.DEFAULT_CYCLE);
+	}
+	/**
+	 * @see {@link TbskModulator#TbskModulator(PApplet, TbskTone, TbskPreamble)}
+	 * @param parent
+	 * @param tone
+	 */
+	public TbskModulator(PApplet parent,TbskTone tone)
+	{
+		this(parent,tone,CoffPreamble.DEFAULT_CYCLE);
+	}
+	/**
+	 * TBSK変調クラスのインスタンスを生成します。
+	 * @param parent
+	 * processingアプレットのインスタンス
+	 * @param tone
+	 * トーン信号のインスタンス
+	 * @param preamble_cycle
+	 * プリアンブルのシンボルサイクル数
+	 */
+	public TbskModulator(PApplet parent,TbskTone tone,int preamble_cycle)
+	{
+		this._parent = parent;
+		this._mod=new jp.nyatla.tbskmodem.TbskModulator(tone.getBase(),preamble_cycle);
+	}
 
 
 	
@@ -61,34 +85,61 @@ public class TbskModulator
 	 * @return
 	 * General purpose Iterable.
 	 */
+	public ModulateIterable modulate(Iterable<Integer> s,boolean stopsymbol){
+		return new ModulateIterable(this._parent,this._mod.modulate(s,8,stopsymbol));
+	}
 	public ModulateIterable modulate(Iterable<Integer> s){
-		return new ModulateIterable(this._parent,this._mod.modulate(s,8));
+		return this.modulate(s,true);
+	}
+	public ModulateIterable modulate(Integer[] s,boolean stopsymbol){
+		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8,stopsymbol));
 	}
 	public ModulateIterable modulate(Integer[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8));
+		return this.modulate(s,true);
+	}
+	public ModulateIterable modulate(Short[] s,boolean stopsymbol){
+		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8,stopsymbol));
 	}
 	public ModulateIterable modulate(Short[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8));
+		return this.modulate(s,true);
+	}
+	public ModulateIterable modulate(Byte[] s,boolean stopsymbol){
+		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8,stopsymbol));
 	}
 	public ModulateIterable modulate(Byte[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8));
+		return this.modulate(s,true);
+	}
+	public ModulateIterable modulate(int[] s,boolean stopsymbol){
+		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8,stopsymbol));
 	}
 	public ModulateIterable modulate(int[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8));
+		return this.modulate(s,true);
+	}
+	public ModulateIterable modulate(short[] s,boolean stopsymbol){
+		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8,stopsymbol));
 	}
 	public ModulateIterable modulate(short[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8));
+		return this.modulate(s,true);
+	}
+	public ModulateIterable modulate(byte[] s,boolean stopsymbol){
+		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8,stopsymbol));
 	}
 	public ModulateIterable modulate(byte[] s){
-		return new ModulateIterable(this._parent,this._mod.modulate(Functions.toIntegerPyIterator(s),8));
+		return this.modulate(s,true);
 	}
-	public ModulateIterable modulate(String s){
+	public ModulateIterable modulate(String s,boolean stopsymbol){
 		try {
-			return new ModulateIterable(this._parent,this._mod.modulate(s));
+			return new ModulateIterable(this._parent,this._mod.modulate(s,stopsymbol));
 		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException(e);
 		}
 	}
+	public ModulateIterable modulate(String s){
+		return this.modulate(s,true);
+	}	
+	
+	
+	
 	
 
 	/**

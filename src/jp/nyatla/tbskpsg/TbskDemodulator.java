@@ -6,7 +6,7 @@ import jp.nyatla.tbskpsg.utils.WaveFile;
 import jp.nyatla.tbskpsg.result.DemodulateAsStrIterable;
 import jp.nyatla.tbskpsg.result.DemodulateIterable;
 import processing.core.*;
-
+import jp.nyatla.kokolink.protocol.tbsk.preamble.CoffPreamble;
 /**
  * Demodulator of the waveform to data.
  * <br/><br>
@@ -26,7 +26,8 @@ public class TbskDemodulator
 	
 	
 	/**
-	 * Create instance with specified tone and preamble.
+	 * @deprecated
+	 * TBSK信号の復調クラスのコンストラクタです。
 	 * @param parent
 	 * PApplet instance.
 	 * @param tone
@@ -39,14 +40,30 @@ public class TbskDemodulator
 		this._parent = parent;
 		this._demod=new jp.nyatla.tbskmodem.TbskDemodulator(tone.getBase(),preamble.getBase());
 	}
-	/**
-	 * Same as TbskDemodulator(parent,TbskTone.xpskSin(),TbskPreamble.coff(TbskTone.xpskSin());
-	 * @param parent
-	 * PApplet instance.
-	 */	
+
 	public TbskDemodulator(PApplet parent)
 	{
-		this(parent,TbskTone.xpskSin(),TbskPreamble.coff(TbskTone.xpskSin()));
+		this(parent,TbskTone.xpskSin());
+	}
+	public TbskDemodulator(PApplet parent,TbskTone tone)
+	{
+		this(parent,tone,CoffPreamble.DEFAULT_TH,CoffPreamble.DEFAULT_CYCLE);
+	}
+	/**
+	 * TBSK信号復調器のコンストラクタです。
+	 * @param parent
+	 * processingアプレットのインスタンス
+	 * @param tone
+	 * トーン信号のインスタンス
+	 * @param preamble_th
+	 * 信号の検出閾値
+	 * @param preamble_cycle
+	 * プリアンブルのシンボルサイクル数	 * 
+	 */
+	public TbskDemodulator(PApplet parent,TbskTone tone,double preamble_th,int preamble_cycle)
+	{
+		this._parent = parent;
+		this._demod=new jp.nyatla.tbskmodem.TbskDemodulator(tone.getBase(),preamble_th,preamble_cycle);
 	}	
 	
 	
