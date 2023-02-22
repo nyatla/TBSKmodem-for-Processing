@@ -420,7 +420,7 @@ public class TbskModem
 		public boolean readyFrame()
 		{
 			List<RxData> buf=this._buf;
-			if(buf.size()<=1 || !buf.get(0).readyFrame()) {
+			if(buf.isEmpty() || !buf.get(0).readyFrame()) {
 				return false;
 			}
 			return true;	
@@ -531,6 +531,7 @@ public class TbskModem
 					}
 					rxd.add(i);			//データ追記
 				}
+				TbskModem.debug("Payload stopped.");
 				rxd.stop();//停止
 			}
 		}
@@ -647,7 +648,7 @@ public class TbskModem
 	/**
 	 * 受信の完了したTBSKフレームを読みだせる場合、Trueを返します。
 	 */
-	public boolean readyFrame() {
+	public boolean rxFrameReady() {
 		return this._rxtask.readyFrame();
 	}	
 

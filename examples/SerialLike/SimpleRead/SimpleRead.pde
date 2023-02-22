@@ -21,8 +21,7 @@ void setup()
   size(200, 200);
   Minim minim=new Minim(this);
   TbskTone tone=TbskTone.xpskSin();
-  TbskPreamble preamble=TbskPreamble.coff(tone);
-  myPort = new TbskSerial(this,tone,preamble,new MinimAudioInterface(minim,16000));
+  myPort = new TbskSerial(this,tone,new MinimAudioInterface(minim,16000));
 }
 
 void draw()

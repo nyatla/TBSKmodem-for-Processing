@@ -8,7 +8,6 @@ import jp.nyatla.tbskpsg.result.*;
 import jp.nyatla.tbskpsg.utils.*;
 
 TbskTone tone=TbskTone.xpskSin();
-TbskPreamble preamble=TbskPreamble.coff(tone);
 TbskModem modem;
 
 void setup() {
@@ -21,7 +20,7 @@ void setup() {
 
   //Initialize modem instance with Audio interface
   Minim minim=new Minim(this);
-  modem=new TbskModem(this,tone,preamble,new MinimAudioInterface(minim,16000));
+  modem=new TbskModem(this,tone,new MinimAudioInterface(minim,16000));
   TbskModem._DEBUG=true;
 
   // start Modem
@@ -64,6 +63,21 @@ void draw() {
         recvd=recvd+str(modem.rx())+" ";
       }
       break;
+    case 3:
+      if(modem.rxFrameReady()){
+        print("fire");
+        recvd="";
+        var n=modem.rxNumber();
+        while(modem.rxReady()){
+          if(n==modem.rxNumber()){
+            recvd=recvd+str(modem.rx())+" ";
+          }
+        }
+        print("fired");
+        
+      }
+      break;
+      
   }
 
   text(recvd,10,80);
@@ -80,7 +94,7 @@ void keyPressed() {
   }else if(key=='C'||key=='c'){
     modem.rxClear();
   }else if(key=='D'||key=='d'){
-    dec_mode=(dec_mode+1)%3;
+    dec_mode=(dec_mode+1)%4;
     println("rxmode "+str(dec_mode));
   }else if(key=='E'||key=='e'){
     modem.rxBreak();

@@ -6,9 +6,8 @@ import jp.nyatla.tbskpsg.audioif.*;
 import jp.nyatla.tbskpsg.result.*;
 
 TbskTone tone=TbskTone.xpskSin();
-TbskPreamble preamble=TbskPreamble.coff(tone);
-TbskModulator mod=new TbskModulator(this,tone,preamble);
-TbskDemodulator demod=new TbskDemodulator(this,tone,preamble);
+TbskModulator mod=new TbskModulator(this,tone);
+TbskDemodulator demod=new TbskDemodulator(this,tone);
 float[] wave;
 String str;
 void setup() {
