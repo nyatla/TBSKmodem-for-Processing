@@ -1,6 +1,6 @@
 # TBSKmodem for Processing
 
-Japanese documente 👉[Readme.ja.md](Readme.ja.md)
+
 
 This is processing implementation of TBSKmodem.
 🐓[TBSKmodem](https://github.com/nyatla/TBSKmodem/)
@@ -30,6 +30,39 @@ This library is MIT licensed open source software, but not patent free.
 
 ## GetStarted
 
-### Setup
-Soon
+### Manual Setup
+Libraries can be downloaded and manually placed within the `libraries` folder of your Processing sketchbook. To find (and change) the Processing sketchbook location on your computer, open the Preferences window from the Processing application (PDE) and look for the "Sketchbook location" item at the top.
+
+By default the following locations are used for your sketchbook folder: 
+  * For Mac users, the sketchbook folder is located inside `~/Documents/Processing` 
+  * For Windows users, the sketchbook folder is located inside `My Documents/Processing`
+
+Download [tbskpsg.zip](https://github.com/nyatla/TBSKmodem-for-Processing/releases) from [https://github.com/nyatla/TBSKmodem-for-Processing/releases](https://github.com/nyatla/TBSKmodem-for-Processing/releases)
+
+Unzip and copy the contributed Library's folder into the `libraries` folder in the Processing sketchbook. You will need to create this `libraries` folder if it does not exist.
+
+The folder structure for Library tbskpsg should be as follows:
+
+```
+Processing
+  libraries
+    tbskpsg
+      examples
+      library
+        tbskpsg.jar
+      reference
+      src
+```
+             
+Some folders like `examples` or `src` might be missing. After Library tbskpsg has been successfully installed, restart the Processing application.
+
+
+### Example
+The sample code for TBSKmodem can be found in the Example directory.
+
+1. First, let's test signal transmitter. Please open TxAsCharConsole.pde. When you run the sketch, a small window will appear, but it is a dummy.
+
+This sketch sends TBSK-modulated sound from the speaker when you press the 'A' key. Press 'A' key to test if the signal is transmitted.
+
+2. Next, let's test receiver. Please open RxAsCharGui.pde. When you run the sketch, a black screen and volume meter will be displayed. When a signal is sent from TxAsCharConsole, the meter will respond and display the demodulated text.
 
