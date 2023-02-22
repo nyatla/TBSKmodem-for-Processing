@@ -60,9 +60,9 @@ Some folders like `examples` or `src` might be missing. After Library tbskpsg ha
 ### Example
 The sample code for TBSKmodem can be found in the Example directory.
 
-1. First, let's test signal transmitter. Please open TxAsCharConsole.pde. When you run the sketch, a small window will appear, but it is a dummy.
+First, let's test signal transmitter. Please open TxAsCharConsole.pde. When you run the sketch, a small window will appear, but it is a dummy.
 
 This sketch sends TBSK-modulated sound from the speaker when you press the 'A' key. Press 'A' key to test if the signal is transmitted.
 
-2. Next, let's test receiver. Please open RxAsCharGui.pde. When you run the sketch, a black screen and volume meter will be displayed. When a signal is sent from TxAsCharConsole, the meter will respond and display the demodulated text.
+Next, let's test receiver. Please open RxAsCharGui.pde. When you run the sketch, a black screen and volume meter will be displayed. When a signal is sent from TxAsCharConsole, the meter will respond and display the demodulated text.
 
