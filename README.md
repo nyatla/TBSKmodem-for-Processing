@@ -59,11 +59,11 @@ The sample code for TBSKmodem can be found in the Example directory.
 
 First, let's test signal transmitter. Please open TxAsCharConsole.pde. When you run the sketch, a small window will appear, but it is a dummy.
 
-https://github.com/nyatla/TBSKmodem-for-Processing/tree/master/examples/Modem/TxAsCharConsole
+[TxAsCharConsole](https://github.com/nyatla/TBSKmodem-for-Processing/tree/master/examples/Modem/TxAsCharConsole/TxAsCharConsole.pde)
 
 This sketch sends TBSK-modulated sound from the speaker when you press the 'A' key. Press 'A' key to test if the signal is transmitted.
 
 
 Next, let's test receiver. Please open RxAsCharGui.pde. When you run the sketch, a black screen and volume meter will be displayed. When a signal is sent from TxAsCharConsole, the meter will respond and display the demodulated text.
 
-https://github.com/nyatla/TBSKmodem-for-Processing/blob/master/examples/Modem/RxAsCharGui/RxAsCharGui.pde
+[RxAsCharGui](https://github.com/nyatla/TBSKmodem-for-Processing/blob/master/examples/Modem/RxAsCharGui/RxAsCharGui.pde)
